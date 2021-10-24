@@ -1,0 +1,305 @@
+---
+title: "Case 3: Redlining, Oil Wells, and Proximity to Public Schools"
+author: "Lauren Ng and Xavier Torres"
+date: "3/6/2021"
+output:
+  html_document:
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/lng4/Desktop/QTM3605/Data/Case 3')
+```
+
+# Import file and data cleaning
+
+```{r, echo=FALSE}
+redlined <- read.csv("CA_wells_redline.csv")
+names(redlined)
+
+#keep if county is Los Angeles
+redlined_LA<- subset(redlined, CountyName=="Los Angeles")
+
+#dummy for area with redline
+redlined_LA$red_area<- ifelse(is.na(redlined_LA$areasize),0,1)
+table(redlined_LA$red_area)
+
+#dummy for active/idle wells
+redlined_LA$active<- ifelse(redlined_LA$WellStatus=="Active" | redlined_LA$WellStatus=="Idle",1,0)
+table(redlined_LA$active)
+
+# Create dummy variables for grades
+redlined_LA$lowgrade<- ifelse(redlined_LA$holc_grade=="D" | redlined_LA$holc_grade=="C",1,0)
+redlined_LA$grade_d<- ifelse(redlined_LA$holc_grade=="D",1,0)
+redlined_LA$grade_c<- ifelse(redlined_LA$holc_grade=="C",1,0)
+redlined_LA$grade_b<- ifelse(redlined_LA$holc_grade=="B",1,0)
+redlined_LA$grade_a<- ifelse(redlined_LA$holc_grade=="A",1,0)
+
+#Set up packages
+#install.packages("modelsummary")
+#install.packages("dplyr")
+library(modelsummary)
+library(dplyr)
+```
+# Task 1
+
+## Table 1
+
+```{r}
+models_rednon <- list()
+models_rednon[['redline vs. non-redline']] <-lm(active ~ red_area, data=redlined_LA)
+modelsummary(models_rednon, stars=TRUE, title="Table 1. Oil Wells in Redlined Areas vs. Non-Redline Areas in LA, Dep. Var.: Active/Idle Oil Wells")
+
+```
+
+## Task 1 Response
+Formally interpret the y-intercept and the slope. What is the implication here?
+The y-intercept means that 28% of all oil wells in the area are active or idle. The slope means that if an area is determined as red-lined, this percentage rises by 5%, so on average 33% of all oil wells in the area are active or idle. 
+
+
+# Task 2
+## Table 2
+
+```{r}
+
+
+models_redareas <- list()
+models_redareas[['low grade']] <-lm(active ~ lowgrade, data=redlined_LA)
+models_redareas[['grade d']] <-lm(active ~ grade_d, data=redlined_LA)
+models_redareas[['grade c']] <-lm(active ~ grade_c, data=redlined_LA)
+models_redareas[['grade b']] <-lm(active ~ grade_b, data=redlined_LA)
+models_redareas[['grade a']] <-lm(active ~ grade_a, data=redlined_LA)
+modelsummary(models_redareas, stars=TRUE, title="Table 2. Redlined Areas by Grade, Dep. Var.: Active/Idle Oil Wells")
+
+```
+
+## Task 2 Response
+In Table 2, how would you describe what it is telling you?
+
+The low_grade variable tells us that in redlined areas with a low grade, the proportion of oil wells that are active or idle is 32.4%. The grade_d variable tells us in redlined areas with a grade D, on average, proportion of oil wells that are active or idle decreases 2.8% to 27.7% compared to areas that are not grade D. The grade_a and grade_b variable tell us that redlined areas with a grade A or B have on average, a 8.6% and an 8.3% greater proportion of active or idle oil wells located in their neighborhood, respectively, compared to areas that are not grade A or B. At first this may not make sense because typically areas graded higher are deemed to be more credit-worthy and therefore more well-off neighborhoods which would contradict the regression telling us that these areas have higher proportions of active or idle oil wells. We came to conclusion that this may be the result because times may have changed drastically since these grades were used, which were during the 1930s through 1977s.The areas marked grade A or B may not be the same neighborhoods when these ratings were given out. Another possibility is social activists may advocate for areas with a low grade, causing them oil companies to no longer build active oil wells in their areas. 
+
+
+# Task 3
+
+## Table 3
+
+```{r}
+models_redareas <- list()
+models_redareas[['low grade']] <-lm(active ~ lowgrade + areasize, data=subset(redlined_LA,red_area==1))
+models_redareas[['grade d']] <-lm(active ~ grade_d + areasize, data=subset(redlined_LA,red_area==1))
+models_redareas[['grade c']] <-lm(active ~ grade_c + areasize, data=subset(redlined_LA,red_area==1))
+models_redareas[['grade b']] <-lm(active ~ grade_b + areasize, data=subset(redlined_LA,red_area==1))
+models_redareas[['grade a']] <-lm(active ~ grade_a + areasize, data=subset(redlined_LA,red_area==1))
+modelsummary(models_redareas, stars=TRUE, title="Table 2. Redlined Areas by Grade, Dep. Var.: Active/Idle Oil Wells, Control: Area Size")
+
+```
+
+
+## Task 3 Response
+What are the differences in regression results between Table 2 and Table 3? Do you think it makes more sense to use Table 2 or Table 3? Most importantly, WHY?
+
+The differences between the regression results is that in Table 2, the proportion of active or idle oil wells in a redlined area is around 30%. However, the regression results in Table 3 show us that with the control variable, area_size, the proportion of oil wells that are active or idle is much higher, ranging from 30% to 50%. In addition, Table 3 tells us that for red-lined areas with a grade A or B, for every increase in square kilometer, the average proportion of oil wells that are active or idle decreases by 1.2%. We reasoned that as an area grows, the proportion decreases because there could also be a large number of plugged oil wells in the equation or other oil wells that are simply not active or idle. It makes more sense to use Table 3 because it takes into account the area sizes of these red-lined areas. In addition, Table 2 only bases the probability off grades of different neighborhoods, which could not accurately represent a neighborhood given that these grades were made over 50 years ago. 
+
+# Tasks 4 and 5
+
+## More Data Imports and Cleaning
+
+```{r, echo=FALSE}
+
+# Import the closest wells to schools in LA County data
+schools_cl_wells <- read.csv("CA_wells_schools_LACounty_closest.csv")
+schools_cl_wells$ncescode <-schools_cl_wells$InputID
+schools_cl_wells$API <- schools_cl_wells$TargetID
+names(schools_cl_wells)
+
+# Create Distance in feet variable
+schools_cl_wells$feet <-  schools_cl_wells$Distance*3.28084
+summary(schools_cl_wells$Distance)
+
+# Import the schools in redlined areas and tracts data
+schools_red <- read.csv("CA_schools_redline_LACounty.csv")
+schools_tract <-read.csv("sch_tracts_only.csv")
+
+# Merge data together
+sch_red_closest_wells <- merge(schools_red,schools_cl_wells)
+sch_red_closest_wells$red_area<- ifelse(is.na(sch_red_closest_wells$neighborho),0,1)
+sch_red_closest_wells <- left_join(sch_red_closest_wells,schools_tract)
+View(sch_red_closest_wells)
+
+# Generate grade dummies for neighborhoods
+sch_red_closest_wells$lowgrade<- ifelse(sch_red_closest_wells$holc_grade=="D" | sch_red_closest_wells$holc_grade=="C",1,0)
+sch_red_closest_wells$grade_d<- ifelse(sch_red_closest_wells$holc_grade=="D",1,0)
+sch_red_closest_wells$grade_c<- ifelse(sch_red_closest_wells$holc_grade=="C",1,0)
+sch_red_closest_wells$grade_b<- ifelse(sch_red_closest_wells$holc_grade=="B",1,0)
+sch_red_closest_wells$grade_a<- ifelse(sch_red_closest_wells$holc_grade=="A",1,0)
+
+# Generate distance within 1200 feet of schools dummy
+sch_red_closest_wells$within1200ft <- ifelse(sch_red_closest_wells$feet <= 1200, 1, 0)
+table(sch_red_closest_wells$within1200ft)
+
+
+
+```
+
+## Table 4
+
+```{r}
+# Table 4
+models_closest <- list()
+models_closest[['low grade']] <-lm(feet ~ lowgrade, data=sch_red_closest_wells)
+models_closest[['grade d']] <-lm(feet ~ grade_d, data=sch_red_closest_wells)
+models_closest[['grade c']] <-lm(feet ~ grade_c, data=sch_red_closest_wells)
+models_closest[['grade b']] <-lm(feet ~ grade_b, data=sch_red_closest_wells)
+models_closest[['grade a']] <-lm(feet ~ grade_a, data=sch_red_closest_wells)
+models_closest[['redlined']] <-lm(feet ~ red_area, data=sch_red_closest_wells)
+modelsummary(models_closest, stars=TRUE, title="Table 4. LA Schools and Oil Wells in Redlined Areas, Dep. Var.: Distance between school and closest well (in feet)")
+
+```
+
+## Table 5
+
+```{r}
+# Table 5
+models_closest_1200 <- list()
+models_closest_1200[['low grade']] <-lm(within1200ft ~ lowgrade, data=sch_red_closest_wells)
+models_closest_1200[['grade d']] <-lm(within1200ft ~ grade_d, data=sch_red_closest_wells)
+models_closest_1200[['grade c']] <-lm(within1200ft ~ grade_c, data=sch_red_closest_wells)
+models_closest_1200[['grade b']] <-lm(within1200ft ~ grade_b, data=sch_red_closest_wells)
+models_closest_1200[['grade a']] <-lm(within1200ft ~ grade_a, data=sch_red_closest_wells)
+models_closest_1200[['red vs. non']] <-lm(within1200ft~ red_area, data=sch_red_closest_wells)
+modelsummary(models_closest_1200, stars=TRUE, title="Table 5. LA Schools and Oil Wells in Redlined Areas, Dep. Var.: Dummy for distance between school and closest well within 1200 feet")
+```
+
+
+## Task 4 Response
+What is the pattern you see in how HOLC grades might affect distances between its schools?
+
+The pattern we observe is that the slope of each of the grade variables vary significantly based on the grade itself. For example, if a neighborhood has a grade D, then the average distance from a school to an oil well decreases by 2156.49 feet to 3011.73 feet compared to the average distance from a school to an oil well that is not located in a neighborhood with a grade D, with an average distance of 5168.22 feet. For the slope of grade_a, if a neighborhood is rated grade A, then the average distance from a school to an oil well increases by 3289.91 feet to 8089.76 feet. All in all, the pattern is that the higher the HOLC grade, the further the distance of an oil well to a school. 
+
+## Task 5 Response
+You added an extra regression model (the last specification) from the previous tables using “red_area.” What does this regression tell you?
+
+This regression tells us that in nonredlined areas, the average proportion of schools within 1200 feet of an oil well is 19.7%. However, if an area is redlined, the average proportion of schools within 1200 feet of an oil well decreases by 2.5% to 17.2%. At first, this may seem confusing because one would expect that schools in redlined areas are closer to oil wells. We concluded that the proportion may be lower in redlined areas because there could be less schools in these areas to begin with. 
+
+# Task 6 
+
+## More Data Cleaning
+
+```{r, echo=FALSE}
+
+# Import schools with closest active/idle wells data
+schools_act_wells <- read.csv("CA_wells_schools_LACounty_active.csv")
+schools_act_wells$ncescode <-schools_act_wells$InputID
+schools_act_wells$API <- schools_act_wells$TargetID
+names(schools_act_wells)
+
+# Generate a distance in feet variable
+schools_act_wells$feet <-  schools_act_wells$Distance*3.28084
+summary(schools_act_wells$Distance)
+
+# Merge data with schools and tracts data
+sch_red_active_wells <- merge(schools_red,schools_act_wells)
+names(sch_red_active_wells)
+sch_red_active_wells$red_area<- ifelse(is.na(sch_red_active_wells$neighborho),0,1)
+table(sch_red_active_wells$red_area)
+sch_red_active_wells <- left_join(sch_red_active_wells,schools_tract)
+View(sch_red_active_wells)
+
+# Generate dummy variables for HOLC grades
+sch_red_active_wells$lowgrade<- ifelse(sch_red_active_wells$holc_grade=="D" | sch_red_active_wells$holc_grade=="C",1,0)
+sch_red_active_wells$grade_d<- ifelse(sch_red_active_wells$holc_grade=="D",1,0)
+sch_red_active_wells$grade_c<- ifelse(sch_red_active_wells$holc_grade=="C",1,0)
+sch_red_active_wells$grade_b<- ifelse(sch_red_active_wells$holc_grade=="B",1,0)
+sch_red_active_wells$grade_a<- ifelse(sch_red_active_wells$holc_grade=="A",1,0)
+
+# Generate within 1200 feet variable for closest ACTIVE/IDLE well to schools
+sch_red_active_wells$within1200ft <- ifelse(sch_red_active_wells$feet <= 1200, 1, 0)
+table(sch_red_active_wells$within1200ft)
+
+
+```
+
+
+## Table 6
+
+```{r}
+
+# Table 6
+models_active <- list()
+models_active[['low grade']] <-lm(feet ~ lowgrade, data=sch_red_active_wells)
+models_active[['grade d']] <-lm(feet ~ grade_d, data=sch_red_active_wells)
+models_active[['grade c']] <-lm(feet ~ grade_c, data=sch_red_active_wells)
+models_active[['grade b']] <-lm(feet ~ grade_b, data=sch_red_active_wells)
+models_active[['grade a']] <-lm(feet ~ grade_a, data=sch_red_active_wells)
+models_active[['redlined vs. non']] <-lm(feet ~ red_area, data=sch_red_active_wells)
+modelsummary(models_active, stars=TRUE, title="Table 6. LA Schools and Oil Wells in Redlined Areas, Dep. Var.: Distance between school and closest ACTIVE/IDLE well (in feet)")
+
+```
+
+
+## Table 7
+
+```{r}
+
+# Table 7
+models_active_1200 <- list()
+models_active_1200[['low grade']] <-lm(within1200ft ~ lowgrade, data=sch_red_active_wells)
+models_active_1200[['grade d']] <-lm(within1200ft ~ grade_d, data=sch_red_active_wells)
+models_active_1200[['grade c']] <-lm(within1200ft ~ grade_c, data=sch_red_active_wells)
+models_active_1200[['grade b']] <-lm(within1200ft ~ grade_b, data=sch_red_active_wells)
+models_active_1200[['grade a']] <-lm(within1200ft ~ grade_a, data=sch_red_active_wells)
+models_active_1200[['redlined vs. non']] <-lm(within1200ft~ red_area, data=sch_red_active_wells)
+modelsummary(models_active_1200, stars=TRUE, title="Table 7. LA Schools and Oil Wells in Redlined Areas, Dep. Var.: Dummy for distance between school and closest ACTIVE/IDLE well within 1200 feet")
+```
+
+## Task 6 Response
+What patterns do you observe from these models?
+In these models, we observe that the lower the grade rating, the closer the average distance between a school and an active/idle oil well. For example, if a redlined area is non-grade D, then the average distance between a school and an active oil/idle oil well is 9986.62 feet. However, if a redlined area is grade D, then the average distance between a school and an active/idle oil well is 6099.89 feet, which is 3886.73 feet closer than a non-grade D area. In addition, if a redlined area is non-grade A, then the average distance between a school and an active/idle oil well is 9475.88 feet. However, if a redlined area is grade A, then the average distance between a school and an active/idle oil well is 10596.06 feet, which is 1120.18 feet farther away than a non-grade A area. For the redlined variable, if an area is non-redlined, then the average distance between a school and the closest active/idle oil well is 10694.75 feet. However, if an area is redlined, then the average distance between a school and the closest active/idle oil well is 7575.57 feet, which is 3119.18 feet closer than if an area is non-redlined. These models tell us that if an area is redlined and has a low grade rating, the closest distance between a school and an active/idle oi well is much closer as opposed to an area that is nonredlined and has a higher grade rating.   
+
+
+# Task 7
+
+
+## Task 7 Response
+In your observations across tables, how robust do you believe the patterns to be? What evidence do you see either for or against redlining affecting oil well proximity to schools? 
+
+We believe these patterns are not as robust as they appear to be because of many reasons. First, the grading systems for these areas are outdated, so it is difficult to definitively claim that because these areas have low grades, they have more active/idle oil wells located in them. In addition, the grading system is very ambiguous because it simply bases it off the claims of "credit-worthiness" which could be a result of many different factors that are hard to aggregate into one grade. Second, the variable red_area is also ambiguous because it automatically assigns a 0 to an area size that is N/A, meaning that it doesn't account for the possibility that some of the N/A numbers could also be redlined, which could skew our model results. Third, while we see that there is evidence supporting the claim that redlining affects oil well proximity to schools, the determinants of what a redlined area is and what it is not are not substantial enough to say that the models accurately represent what is really happening. 
+
+
+# Task 8
+
+## Task 8 Code
+```{r}
+models_active <- list()
+models_active[['medeareningsa']] <-lm(med_earnings_adults~ grade_a, data=sch_red_closest_wells)
+models_active[['medeareningsb']] <-lm(med_earnings_adults~ grade_b, data=sch_red_closest_wells)
+models_active[['medeareningsc']] <-lm(med_earnings_adults~ grade_c, data=sch_red_closest_wells)
+models_active[['medeareningsd']] <-lm(med_earnings_adults~ grade_d, data=sch_red_closest_wells)
+
+models_active[['poverty tracta']] <-lm(poverty_tract~ grade_a, data=sch_red_closest_wells)
+models_active[['poverty tractb']] <-lm(poverty_tract~ grade_b, data=sch_red_closest_wells)
+models_active[['poverty tractc']] <-lm(poverty_tract~ grade_c, data=sch_red_closest_wells)
+models_active[['poverty tractd']] <-lm(poverty_tract~ grade_d, data=sch_red_closest_wells)
+
+models_active[['foodstampsa']] <-lm(foodstamps_tract~ grade_a, data=sch_red_closest_wells)
+models_active[['foodstampsb']] <-lm(foodstamps_tract~ grade_b, data=sch_red_closest_wells)
+models_active[['foodstampsc']] <-lm(foodstamps_tract~ grade_c, data=sch_red_closest_wells)
+models_active[['foodstampsd']] <-lm(foodstamps_tract~ grade_d, data=sch_red_closest_wells)
+modelsummary(models_active)
+```
+
+## Task 8 Response
+The data frames used to create Tables 4-7 also contain school-level variables that you have plenty of experience with, such as percentage white, percentage black, school rating, and tract-level variables such as percentage living in poverty and percentage black/AfricanAmerican. Run some extra regressions, place them in a modelsummary table, and see if you notice anything else worthwhile. Describe what you find. 
+
+We ran 8 more models to find if there was any correlation between HOLC grades and the economic status of the people in those areas. In the income models, we found that the median income in areas with grade A were on average, higher by $16,000 compared to areas that were not grade A. In grade D areas, the inverse was true. The median income in areas with a grade D were lower by almost 13,000 dollars. What we found was that the model gave us strong x intercepts when it came to effects of median income, poverty, and food stamp tracts, However we did not find if they were statistically significant enough, which could be due to the low sample size and large amount of missing data. 
+
+## Task 9 response
+
+We don't necessarily trust the patterns of data that come from these models as we don't have any fundamental reasoning on why some counties are deemed redlined and not others. We are also hesitant to make any claims while using data that is over 40 years old. While we could see a world where redlining causes areas to devalue and then oil companies choose to put oil wells there due to the cheaper property, we do not know enough to make that assumption. We also do not have any data on the median home value, which could help to support our claim. We also do not know if the relationship between oil wells and schools means anything, because correlation does not equal causation. There could be a situation where bad schools decrease property value and then oil wells come in and not the reverse where oil wells cause bad schools.
+
+## Task 10
+
+One explanation for oil wells being so close to schools is the location needs for both  these buildings. Schools need large tracts of land and oil wells need the same, so it could be that demand the same type of land causes these schools and oil wells to be placed closer together. Another explanation for the proximity between oil wells and schools is that oil wells are early indicator of valuable land and as a result there will be people settling there and eventually constructing schools in that area. 

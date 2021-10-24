@@ -1,0 +1,103 @@
+---
+title: "final project v1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# set working direcotry
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = 'C:/Users/xavier//Desktop//R data sets/')
+library(modelsummary)
+library(scales)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+# import the data 
+housing=read.csv('lowinchousing_schquality_tract.csv')
+schools=read.csv('schools_data.csv')
+housing$poverty= percent(housing$poverty)
+housing$poverty = paste(1:10, "%", sep = "") 
+housing$poverty=as.numeric(sub("%", "", housing$poverty)) #Turned the original 'poverty variable' into a  
+housing$year_built[housing$year_built==0]<-NA# there were many instances where the year of the building would be 0 therefore it would be reasonable to say that it would be missing data rather than houses that were built in the year 0.
+housing$square_feet[housing$square_feet==0]<-NA# there are no houses with 0 sqft therefore it must be NA
+housing$rent_negot=as.factor(housing$rent_negot)# rent negot is whether or not the rent was negotiated as such it is a factor not a int.
+housing$rent_amount[housing$rent_amount>2500]=NA # complicated but there were some houses where the payment was around 10k but obv if you are on section 8 which this data set is exclusively made up of then you wont qualify for section 8 under that area.
+housing$whitemaj <- ifelse(housing$white>=.5,'1','NA')
+housing$nonwhitemaj <- ifelse(housing$white<=.5,'1','NA')
+housing$year_built[housing$year_built>600]<-NA# there were many instances where the year of the building would be 0 therefore it would be reasonable to say that it would be missing data rather than houses that were built in the year 0.
+housing$year_built[2018<housing$year_built]=NA
+housing$year_built[1600>housing$year_built]=NA
+housing$age= 2018-housing$year_built
+housing$square_feet[6500<housing$square_feet]=NA
+housing$square_feet[200>housing$square_feet]=NA
+housing$rentpersqft= housing$rent_amount/housing$square_feet
+sum(housing$state=='CA') 
+#set up basic correlations
+modeloutcomes = list()
+modeloutcomesr = list()
+modeloutcomes2= list()
+modeloutcomes3= list()
+modeloutcomes4= list()
+modeloutcomes5= list()
+
+modeloutcomes[['blackavgschool']]= lm(rating_highsch~black,data = housing)
+modeloutcomes[['hispanicavgschool']]= lm(rating_highsch~hispanic_latino,data = housing)
+modeloutcomes[['whiteavgschool']]= lm(rating_highsch~white,data = housing)
+modeloutcomes[['asianavgschool']]= lm(rating_highsch~asian,data = housing)
+modeloutcomes[['medearningsavgschool']]= lm(rating_highsch~med_earnings_adults,data = housing) # why is there no effect of median income on school quality?
+modeloutcomesr[['blackrent']]= lm(avg_rating~black+rent_amount,data = housing)
+modeloutcomesr[['hisrent']]= lm(rent_amount~hispanic_latino,data = housing)
+modeloutcomesr[['whiterent']]= lm(rent_amount~white,data = housing)
+modeloutcomesr[['whitemajonage']]= lm(age~whitemaj,data = housing)
+modeloutcomesr[['nonwhitemajonage']]= lm(age~nonwhitemaj,data = housing)
+modeloutcomesr[['asianrent']]= lm(rent_amount~asian,data = housing)
+modeloutcomesr[['squarefeetonrent']]= lm(rent_amount~square_feet,data = housing)
+modeloutcomesr[['rentoneverything']]= lm(rent_amount~poverty+avg_rating+rating_highsch+bachelors_up,data = housing)
+modeloutcomesr[['ageonrent']]= lm(rent_amount~age,data = housing)
+modelsummary(modeloutcomesr)
+sum(is.na(housing$med_earnings_adults)) #there is tons of missing data in the med earnings data set therefore we cannot gather a reliable effect on school quality.
+
+modeloutcomes2[['highandupavgschool']]= lm(rating_highsch~highschool_up, data = housing)
+modeloutcomes2[['bachandupavgschool']]= lm(rating_highsch~bachelors_up, data = housing)
+modeloutcomes2[['eduandhousing']]= lm(rent_amount~highschool_up+bachelors_up, data = housing)
+
+modeloutcomes3[['povertyrent']]= lm(rent_amount~poverty,data = housing)
+modeloutcomes3[['povertywhite']]= lm(white~poverty,data = housing)
+modeloutcomes3[['povertyblack']]= lm(black~poverty,data = housing)
+modeloutcomes3[['povertyasian']]= lm(asian~poverty,data = housing)
+modeloutcomes3[['povertyhis']]= lm(hispanic_latino~poverty,data = housing)
+modeloutcomes3[['whitepov']]= lm(poverty~white,data = housing)
+modeloutcomes3[['propertytypeonhigh']]= lm(rating_highsch~property_type,data = housing)
+modeloutcomes3[['ageonhigh']]= lm(rating_highsch~age,data = housing)
+modeloutcomes3[['ageonmiddle']]= lm(rating_middle~age,data = housing)
+modeloutcomes3[['ageonelem']]= lm(rating_elem~age,data = housing)
+modeloutcomes5[['ratingonyrbuilt']]= lm(age~rating_highsch,data = housing) # schools that are 
+
+modeloutcomes4[['blackrentonrating']]= lm(avg_rating~black+rent_amount,data = housing)
+modeloutcomes4[['whiterentonrating']]= lm(avg_rating~white+rent_amount,data = housing)
+modeloutcomes4[['asainrentonrating']]= lm(avg_rating~asian+rent_amount,data = housing)
+modeloutcomes4[['hisrentonrating']]= lm(avg_rating~hispanic_latino+rent_amount,data = housing)
+modeloutcomes4[['whitmajonrating']]= lm(avg_rating~whitemaj+rent_amount,data = housing)
+modeloutcomes4[['nonwhitemajonrating']]= lm(avg_rating~nonwhitemaj+rent_amount,data = housing)
+modeloutcomes4[['rentnegotonschqual']]= lm(avg_rating~rent_negot,data = housing)
+modeloutcomes4[['rentpersqftonrating']]= lm(avg_rating~rentpersqft,data = housing)
+modeloutcomes4[['whiteonrentpersqft']]= lm(rentpersqft~whitemaj,data = housing)
+modeloutcomes4[['nonwhiteonrentpersqft']]= lm(rentpersqft~nonwhitemaj,data = housing)
+
+modelsummary(modeloutcomes5)
+modelsummary(modeloutcomes4)
+modelsummary(modeloutcomes3)
+modelsummary(modeloutcomes2)
+modelsummary(modeloutcomesr)
+```
+
+```{r}
+
+```
+
